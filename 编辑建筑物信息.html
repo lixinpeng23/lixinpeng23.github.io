@@ -1,0 +1,211 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>
+      建筑物信息管理系统
+    </title>
+
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.26/esri/themes/light/main.css"
+    />
+    <script src="https://js.arcgis.com/4.26/"></script>
+
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+
+    <script>
+      require(["esri/WebMap", "esri/views/MapView", "esri/widgets/Editor", "esri/layers/FeatureLayer","esri/widgets/Fullscreen",
+      "esri/widgets/CoordinateConversion","esri/widgets/Home","esri/widgets/Compass","esri/widgets/DistanceMeasurement2D",
+        "esri/widgets/AreaMeasurement2D"], (
+        WebMap,
+        MapView,
+        Editor,
+        FeatureLayer,
+        Fullscreen,
+        CoordinateConversion,
+        Home,
+        Compass,
+        DistanceMeasurement2D, 
+        AreaMeasurement2D
+      ) => {
+        let pointLayer, lineLayer, polygonLayer;
+
+        // Create a map from the referenced webmap item id
+        const webmap = new WebMap({
+          portalItem: {
+            //id: "459a495fc16d4d4caa35e92e895694c8"
+            id:"cd3f123fb46c41c7a948c82c5f0a3bb7"
+          }
+        });
+
+        const view = new MapView({
+          container: "viewDiv",
+          map: webmap
+        });
+
+        const featureLayer1 = new FeatureLayer({
+                url: "https://services6.arcgis.com/nPevoUBW9gsNnQ8z/arcgis/rest/services/%E5%BB%BA%E7%AD%91%E7%89%A9/FeatureServer/0",//自己的要素服务url
+                popupTemplate: {
+                    title: "名称</br>{建筑物名称}", //括号内为想要显示的字段名称
+                    overwriteActions: true
+                }
+            });
+            const featureLayer2 = new FeatureLayer({
+                url: "https://services6.arcgis.com/nPevoUBW9gsNnQ8z/arcgis/rest/services/%E9%9D%A2%E5%9B%BE%E5%B1%82/FeatureServer/0",
+                popupTemplate: {
+                    title: "区域 </br>{建筑物区域}",
+                    overwriteActions: true
+                }
+            });
+            const featureLayer3 = new FeatureLayer({
+                url: "https://services6.arcgis.com/nPevoUBW9gsNnQ8z/arcgis/rest/services/%E6%B5%8E%E5%8D%97%E5%B8%82%E5%8C%BA%E5%9F%9F/FeatureServer/0",
+                popupTemplate: {
+                    title: "面 </br>{建筑物面},({Caption})",
+                    overwriteActions: true
+                }
+            });
+            var fullscreen = new Fullscreen({
+              view: view
+              });
+              view.ui.add(fullscreen, "top-left");
+           
+
+
+        view.when(() => {
+          view.map.loadAll().then(() => {
+            view.map.editableLayers.forEach((layer) => {
+              if (layer.type === "feature") {
+                switch (layer.geometryType) {
+                  case "polygon":
+                    polygonLayer = layer;
+                    break;
+                  case "polyline":
+                    lineLayer = layer;
+                    break;
+                  case "point":
+                    pointLayer = layer;
+                    break;
+                }
+              }
+            });
+
+            // Create layerInfos for layers in Editor. This
+            // sets the fields for editing.
+
+            const pointInfos = {
+              layer: pointLayer,
+              formTemplate: {
+                // autocasts to FormTemplate
+                elements: [
+                  {
+                    // autocasts to Field Elements
+                    type: "field",
+                    fieldName: "建筑物名称",
+                    label: "建筑物名称"
+                  },
+                  {
+                    type: "field",
+                    fieldName: "建筑用途",
+                    label: "建筑用途"
+                  },
+                  {
+                    type: "field",
+                    fieldName: "营业时间",
+                    label: "营业时间"
+                  },
+                  {
+                    type: "field",
+                    fieldName: "可容纳人数",
+                    label: "可容纳人数"
+                  },
+                  {
+                    type: "field",
+                    fieldName: "建筑物位置",
+                    label: "建筑物位置"
+                  },
+                  {
+                    type: "field",
+                    fieldName: "建筑物图片",
+                    label: "招建筑物图片"
+                  }
+                ]
+              }
+            };
+
+            const lineInfos = {
+              layer: lineLayer,
+              formTemplate: {
+                // autocasts to FormTemplate
+                elements: [
+                  {
+                    // autocasts to Field Elements
+                    type: "field",
+                    fieldName: "建筑物面",
+                    label: "建筑物面"
+                  }
+                ]
+              }
+            };
+
+            const polyInfos = {
+              layer: polygonLayer,
+              formTemplate: {
+                // autocasts to FormTemplate
+                elements: [
+                  {
+                    // autocasts to FieldElement
+                    type: "field",
+                    fieldName: "name",
+                    label: "名称"
+                  }
+                ]
+              }
+            };
+
+            const editor = new Editor({
+              view: view,
+              layerInfos: [pointInfos, lineInfos, polyInfos]
+            });
+
+            // Add the widget to the view
+            view.ui.add(editor, "top-right");
+          });
+        });
+
+        let ccWidget=new CoordinateConversion({
+          view: view
+        });
+        view.ui.add(ccWidget,"bottom-left");
+        
+        const homeBtn = new Home({
+          view: view
+        });
+        view.ui.add(homeBtn, "top-left");
+        
+        let compass = new Compass({
+          view: view
+        });
+        view.ui.add(compass, "top-left");
+        
+        
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+  </body>
+</html>

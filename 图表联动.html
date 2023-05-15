@@ -1,0 +1,201 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1, maximum-scale=1,user-scalable=no"
+    />
+    <title>
+      建筑物信息总览
+    </title>
+
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.26/esri/themes/light/main.css"
+    />
+    <script src="https://js.arcgis.com/4.26/"></script>
+
+    <style>
+      html,
+      body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      #viewDiv {
+        height: 70%;
+        width: 100%;
+      }
+
+      .container {
+        height: 30%;
+        width: 100%;
+      }
+    </style>
+    <script>
+      require([
+        "esri/WebMap",
+        "esri/views/MapView",
+        "esri/core/reactiveUtils",
+        "esri/layers/FeatureLayer",
+        "esri/widgets/FeatureTable"
+      ], function (WebMap, MapView, reactiveUtils, FeatureLayer, FeatureTable) {
+        let selectionIdCount = 0; // The filtered selection id count
+        let highlightIdsCount = 0; // The id count of all highlightIds
+        let candidate; // The graphic accessed via the view.click event
+
+        const webmap = new WebMap({
+          portalItem: {
+            id: "6c334e760a5945208ad72e2f4561ce6e"
+          }
+        });
+
+        const view = new MapView({
+          container: "viewDiv",
+          map: webmap,
+          // center: [-72.92, 43.28],
+          // zoom: 10,
+          popup: {
+            autoOpenEnabled: false
+          } // Disable popups
+        });
+
+        view.when(() => {
+          const featureLayer = webmap.layers.getItemAt(2); // Grabs the first layer in the map
+          featureLayer.title = "建筑物信息表总览";
+
+          // Create the feature table
+          const featureTable = new FeatureTable({
+            view: view, // Required for feature highlight to work
+            layer: featureLayer,
+            visibleElements: {
+              // Autocast to VisibleElements
+              menuItems: {
+                clearSelection: true,
+                refreshData: true,
+                toggleColumns: true,
+                selectedRecordsShowAllToggle: true,
+                selectedRecordsShowSelectedToggle: true,
+                zoomToSelection: true
+              }
+            },
+            tableTemplate: {
+              // Autocast to TableTemplate
+              columnTemplates: [
+                // Takes an array of FieldColumnTemplate and GroupColumnTemplate
+                {
+                  // Autocast to FieldColumnTemplate.
+                  type: "field",
+                  fieldName: "建筑物名称",
+                  label: "建筑物名称",
+                  direction: "asc"
+                },
+                {
+                  type: "field",
+                  fieldName: "建筑物位置",
+                  label: "建筑物位置"
+                },
+                {
+                  type: "field",
+                  fieldName: "建筑物简介",
+                  label: "建筑物简介"
+                },
+                {
+                  type: "field",
+                  fieldName: "经度",
+                  label: "经度"
+                },
+                {
+                  type: "field",
+                  fieldName: "纬度",
+                  label: "纬度"
+                },
+                {
+                  type: "field",
+                  fieldName: "建筑物图片",
+                  label: "建筑物图片"
+                },
+                {
+                  type: "field",
+                  fieldName: "链接",
+                  label: "链接"
+                }
+              ]
+            },
+            container: document.getElementById("tableDiv")
+          });
+
+
+          reactiveUtils.when(
+            () => view.stationary === true,
+            () => {
+              // Get the new extent of view/map whenever map is updated.
+              if (view.extent) {
+                // Filter out and show only the visible features in the feature table.
+                featureTable.filterGeometry = view.extent;
+              }
+            },
+            {
+              initial: true
+            }
+          );
+
+          // Listen for the view's click event and access the associated graphic.
+
+          view.on("immediate-click", (event) => {
+            view.hitTest(event).then((response) => {
+              candidate = response.results.find((result) => {
+                return (
+                  result.graphic &&
+                  result.graphic.layer &&
+                  result.graphic.layer === featureLayer
+                );
+              });
+
+            
+              if (candidate) {
+                const objectId = candidate.graphic.getObjectId();
+
+                if (featureTable.highlightIds.includes(objectId)) {
+                  // Remove feature from current selection if feature
+                  // is already added to highlightIds collection
+                  featureTable.highlightIds.remove(objectId);
+                } else {
+                  // Add this feature to the featureTable highlightIds collection
+                  featureTable.highlightIds.add(objectId);
+                }
+              }
+            });
+          });
+
+         
+
+          featureTable.watch("highlightIds.length", (ids) => {
+            highlightIdsCount = ids;
+
+           
+
+            featureTable.viewModel.activeFilters.forEach((filter) => {
+              if (filter.type === "selection") {
+                selectionIdCount = filter.objectIds.length; // the filtered selection's id count
+              
+                if (selectionIdCount !== highlightIdsCount) {
+                  featureTable.filterBySelection();
+                }
+              }
+            });
+          });
+        });
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+    <div class="container">
+      <div id="tableDiv"></div>
+    </div>
+  </body>
+</html>
